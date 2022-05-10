@@ -21,6 +21,7 @@ func (s *Server) CreateAgentEndpoint(ctx context.Context, endpoint *proto.AgentE
 	e := models.Endpoint{
 		Name:              endpoint.Name,
 		Kind:              "agent",
+		Roles:             []string{},
 		HasBaseline:       false,
 		BaselineIsCurrent: false,
 		WatchedPaths:      endpoint.WatchedPaths,
@@ -29,20 +30,6 @@ func (s *Server) CreateAgentEndpoint(ctx context.Context, endpoint *proto.AgentE
 	err = s.repo.Endpoints().Create(ctx, e)
 	if err != nil {
 		log.Error().Caller().Err(err).Msg("failed to create endpoint")
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-
-	for _, role := range []string{"reporter", "baseline"} {
-		_, err := s.enforcer.AddRoleForUser(endpoint.Name, role)
-		if err != nil {
-			log.Error().Caller().Err(err).Msg("failed to assign role to user")
-			return nil, status.Error(codes.Internal, "internal error")
-		}
-	}
-
-	err = s.enforcer.SavePolicy()
-	if err != nil {
-		log.Error().Caller().Err(err).Msg("failed to save policy")
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -62,26 +49,13 @@ func (s *Server) CreateClientEndpoint(ctx context.Context, endpoint *proto.Clien
 	e := models.Endpoint{
 		Name:         endpoint.Name,
 		Kind:         "client",
+		Roles:        endpoint.Roles,
 		WatchedPaths: []string{},
 	}
 
 	err = s.repo.Endpoints().Create(ctx, e)
 	if err != nil {
 		log.Error().Caller().Err(err).Msg("failed to create endpoint")
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-
-	for _, role := range endpoint.Roles {
-		_, err := s.enforcer.AddRoleForUser(endpoint.Name, role)
-		if err != nil {
-			log.Error().Caller().Err(err).Msg("failed to assign role to user")
-			return nil, status.Error(codes.Internal, "internal error")
-		}
-	}
-
-	err = s.enforcer.SavePolicy()
-	if err != nil {
-		log.Error().Caller().Err(err).Msg("failed to save policy")
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
@@ -105,18 +79,6 @@ func (s *Server) DeleteEndpoint(ctx context.Context, endpointName *proto.Endpoin
 	err = s.repo.Endpoints().Delete(ctx, endpointName.Name)
 	if err != nil {
 		log.Error().Caller().Err(err).Msg("failed to delete endpoint")
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-
-	_, err = s.enforcer.DeleteUser(endpointName.Name)
-	if err != nil {
-		log.Error().Caller().Err(err).Msg("failed to delete endpoint")
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-
-	err = s.enforcer.SavePolicy()
-	if err != nil {
-		log.Error().Caller().Err(err).Msg("failed to save policy")
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 

@@ -5,6 +5,7 @@ var schemas = [...]string{
 		id BIGSERIAL PRIMARY KEY,
 		name TEXT UNIQUE NOT NULL,
 		kind VARCHAR(32) NOT NULL,
+		roles TEXT[] NOT NULL,
 		has_baseline BOOLEAN NOT NULL,
 		baseline_is_current BOOLEAN NOT NULL,
 		watched_paths TEXT[] NOT NULL

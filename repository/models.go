@@ -10,6 +10,7 @@ type dbEndpoint struct {
 	ID                uint64         `db:"id"`
 	Name              string         `db:"name"`
 	Kind              string         `db:"kind"`
+	Roles             pq.StringArray `db:"roles"`
 	HasBaseline       bool           `db:"has_baseline"`
 	BaselineIsCurrent bool           `db:"baseline_is_current"`
 	WatchedPaths      pq.StringArray `db:"watched_paths"`
@@ -20,6 +21,7 @@ func (d dbEndpoint) toEndpoint() models.Endpoint {
 		ID:                d.ID,
 		Name:              d.Name,
 		Kind:              d.Kind,
+		Roles:             d.Roles,
 		HasBaseline:       d.HasBaseline,
 		BaselineIsCurrent: d.BaselineIsCurrent,
 		WatchedPaths:      d.WatchedPaths,

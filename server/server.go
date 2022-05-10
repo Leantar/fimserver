@@ -70,20 +70,16 @@ type Server struct {
 func New(repo Repository, config Config) *Server {
 	a := casbinadapter.NewAdapter(repo.Rules())
 	m, err := model.NewModelFromString(`[request_definition]
-	r = sub, obj
-	
-	[policy_definition]
-	p = sub, obj
-	
-	[role_definition]
-	g = _, _
-	
-	[policy_effect]
-	e = some(where (p.eft == allow))
-	
-	[matchers]
-	m = g(r.sub, p.sub) && r.obj == p.obj
-	`)
+r = sub, obj
+
+[policy_definition]
+p = sub_rule, obj
+
+[policy_effect]
+e = some(where (p.eft == allow))
+
+[matchers]
+m = eval(p.sub_rule) && r.obj == p.obj`)
 	if err != nil {
 		log.Fatal().Caller().Err(err).Msg("failed to create casbin model")
 	}
@@ -118,7 +114,6 @@ func (s *Server) Run() error {
 			middleware.ChainStreamServer(
 				s.StreamAuthenticationInterceptor,
 				s.StreamAuthorizationInterceptor,
-				s.StreamOneTimeRoleRemoveInterceptor,
 				grpcValidator.StreamServerInterceptor(),
 			),
 		),
@@ -126,7 +121,6 @@ func (s *Server) Run() error {
 			middleware.ChainUnaryServer(
 				s.UnaryAuthenticationInterceptor,
 				s.UnaryAuthorizationInterceptor,
-				s.UnaryOneTimeRoleRemoveInterceptor,
 				grpcValidator.UnaryServerInterceptor(),
 			),
 		),

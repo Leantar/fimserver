@@ -14,9 +14,9 @@ type PgEndpointRepository struct {
 }
 
 func (e *PgEndpointRepository) Create(ctx context.Context, ep models.Endpoint) (err error) {
-	const query = "INSERT INTO endpoints(name, kind, has_baseline, baseline_is_current, watched_paths) VALUES($1,$2,$3,$4,$5)"
+	const query = "INSERT INTO endpoints(name, kind, roles, has_baseline, baseline_is_current, watched_paths) VALUES($1,$2,$3,$4,$5,$6)"
 
-	_, err = e.db.ExecContext(ctx, query, ep.Name, ep.Kind, ep.HasBaseline, ep.BaselineIsCurrent, pq.Array(ep.WatchedPaths))
+	_, err = e.db.ExecContext(ctx, query, ep.Name, ep.Kind, pq.Array(ep.Roles), ep.HasBaseline, ep.BaselineIsCurrent, pq.Array(ep.WatchedPaths))
 
 	return
 }
@@ -53,9 +53,9 @@ func (e *PgEndpointRepository) GetAgents(ctx context.Context) ([]models.Endpoint
 }
 
 func (e *PgEndpointRepository) Update(ctx context.Context, ep models.Endpoint) (err error) {
-	const query = "UPDATE endpoints SET name = $1, kind = $2, has_baseline = $3, baseline_is_current = $4, watched_paths = $5 WHERE id = $6"
+	const query = "UPDATE endpoints SET name = $1, kind = $2, roles = $3, has_baseline = $4, baseline_is_current = $5, watched_paths = $6 WHERE id = $7"
 
-	_, err = e.db.ExecContext(ctx, query, ep.Name, ep.Kind, ep.HasBaseline, ep.BaselineIsCurrent, pq.Array(ep.WatchedPaths), ep.ID)
+	_, err = e.db.ExecContext(ctx, query, ep.Name, ep.Kind, pq.Array(ep.Roles), ep.HasBaseline, ep.BaselineIsCurrent, pq.Array(ep.WatchedPaths), ep.ID)
 
 	return
 }

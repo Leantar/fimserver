@@ -36,7 +36,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err := repo.Rules().Create(ctx, casbinadapter.Rule{
 		PType: "p",
-		V0:    "reporter",
+		V0:    "r.sub.Kind == \"agent\"",
 		V1:    "GetStartupInfo",
 	})
 	if err != nil {
@@ -45,7 +45,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "baseline",
+		V0:    "r.sub.Kind == \"agent\" && r.sub.HasBaseline == false",
 		V1:    "CreateBaseline",
 	})
 	if err != nil {
@@ -54,7 +54,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "updater",
+		V0:    "r.sub.Kind == \"agent\" && r.sub.HasBaseline == true && r.sub.BaselineIsCurrent == false",
 		V1:    "UpdateBaseline",
 	})
 	if err != nil {
@@ -63,7 +63,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "reporter",
+		V0:    "r.sub.Kind == \"agent\"",
 		V1:    "ReportFsStatus",
 	})
 	if err != nil {
@@ -72,7 +72,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "reporter",
+		V0:    "r.sub.Kind == \"agent\"",
 		V1:    "ReportFsEvent",
 	})
 	if err != nil {
@@ -81,7 +81,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "viewer",
+		V0:    "r.sub.Kind == \"client\" && \"viewer\" in r.sub.Roles",
 		V1:    "GetAgents",
 	})
 	if err != nil {
@@ -90,7 +90,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "viewer",
+		V0:    "r.sub.Kind == \"client\" && \"viewer\" in r.sub.Roles",
 		V1:    "GetAlertsByAgent",
 	})
 	if err != nil {
@@ -99,7 +99,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "approver",
+		V0:    "r.sub.Kind == \"client\" && \"approver\" in r.sub.Roles",
 		V1:    "CreateBaselineUpdateApproval",
 	})
 	if err != nil {
@@ -108,7 +108,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "user_admin",
+		V0:    "r.sub.Kind == \"client\" && \"user_admin\" in r.sub.Roles",
 		V1:    "CreateAgentEndpoint",
 	})
 	if err != nil {
@@ -117,7 +117,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "user_admin",
+		V0:    "r.sub.Kind == \"client\" && \"user_admin\" in r.sub.Roles",
 		V1:    "CreateClientEndpoint",
 	})
 	if err != nil {
@@ -126,7 +126,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "user_admin",
+		V0:    "r.sub.Kind == \"client\" && \"user_admin\" in r.sub.Roles",
 		V1:    "DeleteEndpoint",
 	})
 	if err != nil {
@@ -135,7 +135,7 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 
 	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
 		PType: "p",
-		V0:    "user_admin",
+		V0:    "r.sub.Kind == \"client\" && \"user_admin\" in r.sub.Roles",
 		V1:    "UpdateEndpointWatchedPaths",
 	})
 	if err != nil {
@@ -148,43 +148,12 @@ func createCasbinPolicy(repo *repository.PgRepository) error {
 func createAdminUser(repo *repository.PgRepository) error {
 	ctx := context.Background()
 
-	err := repo.Endpoints().Create(ctx, models.Endpoint{
+	return repo.Endpoints().Create(ctx, models.Endpoint{
 		Name:              "admin",
 		Kind:              "client",
+		Roles:             []string{"viewer", "approver", "user_admin"},
 		HasBaseline:       false,
 		BaselineIsCurrent: false,
-		WatchedPaths:      []string{""},
+		WatchedPaths:      []string{},
 	})
-	if err != nil {
-		return err
-	}
-
-	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
-		PType: "g",
-		V0:    "admin",
-		V1:    "user_admin",
-	})
-	if err != nil {
-		return err
-	}
-
-	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
-		PType: "g",
-		V0:    "admin",
-		V1:    "viewer",
-	})
-	if err != nil {
-		return err
-	}
-
-	err = repo.Rules().Create(context.Background(), casbinadapter.Rule{
-		PType: "g",
-		V0:    "admin",
-		V1:    "approver",
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

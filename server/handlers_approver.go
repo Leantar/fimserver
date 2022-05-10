@@ -22,12 +22,7 @@ func (s *Server) CreateBaselineUpdateApproval(ctx context.Context, endpointName 
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 
-	ok, err := s.enforcer.AddRoleForUser(agent.Name, "updater")
-	if err != nil {
-		log.Error().Caller().Err(err).Msg("failed to assign updater role to agent")
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-	if !ok {
+	if !agent.BaselineIsCurrent {
 		return nil, status.Error(codes.AlreadyExists, "agent already has permission to update baseline")
 	}
 

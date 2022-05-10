@@ -12,55 +12,28 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *Server) removeOneTimeRoles(endpointName, fullMethod string) (err error) {
+type checkableEndpoint struct {
+	Kind              string
+	Roles             []interface{}
+	HasBaseline       bool
+	BaselineIsCurrent bool
+}
+
+func (s *Server) checkAuthorization(endpoint models.Endpoint, fullMethod string) error {
 	method := strings.TrimPrefix(fullMethod, "/fim.Fim/")
 
-	switch method {
-	case "CreateBaseline":
-		_, err = s.enforcer.DeleteRoleForUser(endpointName, "baseline")
-	case "UpdateBaseline":
-		_, err = s.enforcer.DeleteRoleForUser(endpointName, "updater")
+	ep := checkableEndpoint{
+		Kind:              endpoint.Kind,
+		Roles:             make([]interface{}, 0),
+		HasBaseline:       endpoint.HasBaseline,
+		BaselineIsCurrent: endpoint.BaselineIsCurrent,
 	}
 
-	return
-}
-
-func (s *Server) UnaryOneTimeRoleRemoveInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	endpoint := ctx.Value(endpointKey("endpoint")).(models.Endpoint)
-
-	resp, err := handler(ctx, req)
-	if err != nil {
-		return nil, err
+	for _, role := range endpoint.Roles {
+		ep.Roles = append(ep.Roles, role)
 	}
 
-	err = s.removeOneTimeRoles(endpoint.Name, info.FullMethod)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
-	}
-
-	return resp, nil
-}
-
-func (s *Server) StreamOneTimeRoleRemoveInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	endpoint := stream.Context().Value(endpointKey("endpoint")).(models.Endpoint)
-
-	err := handler(srv, stream)
-	if err != nil {
-		return err
-	}
-
-	err = s.removeOneTimeRoles(endpoint.Name, info.FullMethod)
-	if err != nil {
-		return status.Error(codes.Internal, "internal error")
-	}
-
-	return nil
-}
-
-func (s *Server) checkAuthorization(endpointName, fullMethod string) error {
-	method := strings.TrimPrefix(fullMethod, "/fim.Fim/")
-
-	ok, err := s.enforcer.Enforce(endpointName, method)
+	ok, err := s.enforcer.Enforce(ep, method)
 	if err != nil {
 		log.Error().Caller().Err(err).Msg("failed to check authz")
 		return errors.New("unauthorized")
@@ -69,7 +42,7 @@ func (s *Server) checkAuthorization(endpointName, fullMethod string) error {
 		return errors.New("unauthorized")
 	}
 
-	log.Info().Msgf("'%s' accessed '%s'", endpointName, method)
+	log.Info().Msgf("'%s' accessed '%s'", endpoint.Name, method)
 
 	return nil
 }
@@ -77,7 +50,7 @@ func (s *Server) checkAuthorization(endpointName, fullMethod string) error {
 func (s *Server) UnaryAuthorizationInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	endpoint := ctx.Value(endpointKey("endpoint")).(models.Endpoint)
 
-	err = s.checkAuthorization(endpoint.Name, info.FullMethod)
+	err = s.checkAuthorization(endpoint, info.FullMethod)
 	if err != nil {
 		return nil, status.Error(codes.PermissionDenied, "unauthorized")
 	}
@@ -88,7 +61,7 @@ func (s *Server) UnaryAuthorizationInterceptor(ctx context.Context, req interfac
 func (s *Server) StreamAuthorizationInterceptor(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	endpoint := stream.Context().Value(endpointKey("endpoint")).(models.Endpoint)
 
-	err := s.checkAuthorization(endpoint.Name, info.FullMethod)
+	err := s.checkAuthorization(endpoint, info.FullMethod)
 	if err != nil {
 		return status.Error(codes.PermissionDenied, "unauthorized")
 	}
