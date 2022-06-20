@@ -137,7 +137,7 @@ func (s *Server) Run() error {
 
 func (s *Server) Stop() {
 	log.Info().Msg("shutting down")
-	s.srv.GracefulStop()
+	s.srv.Stop()
 }
 
 func createGrpcCredentials(certPath, keyPath, caPath string) (credentials.TransportCredentials, error) {
